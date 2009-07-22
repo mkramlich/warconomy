@@ -1,0 +1,27 @@
+TODO
+
+tanks
+
+planes
+
+partisans/sabotage
+
+spend money to raise more troops
+
+NPC countries should do things during tick (raise troops, attack...)
+
+some countries have siginificant oil, some do not
+
+each country has a set of resources it supplies and demands
+
+a conquered country with 0 occupying troops will likely overthrow and restore self-government
+
+conquered country's owner can loot it, taking it's money and resources
+
+NPC countries can have a list of countries they don't like (may attack)
+
+occupying force size required to keep a conquered country subdued is proportional to native population, plus a factor representing how much of a resistance they put up, plus maybe the land area. So China with high land and pop would be fairly difficult to keep occupied
+
+each NPC country has it's own AI (class/function) that is executed during the tick, in order that each country his its own unique personality, strategy, quirks, etc.
+
+when any battles occur in a country, some civ pop may die
