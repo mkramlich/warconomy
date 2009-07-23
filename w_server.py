@@ -10,10 +10,10 @@ from twisted.internet.protocol import Factory
 
 nats = []
 nats_by_name = {}
-you = 0
 last_input = None
 forces = []
 stances = {}
+tock = 0
 
 STANCE_EXTERMINATE = 0
 STANCE_WAR = 1
@@ -32,9 +32,6 @@ class State: pass
 
 SAVE_FILENAME = 'savedgame'
 
-
-
-
 class Nation:
     name = ''
     money = 1000
@@ -47,18 +44,17 @@ class Nation:
         self.soldiers = soldiers
         self.troop_skill = troop_skill # represents sum effects of: tech, morale, training, initiative, fitness, leadership
         self.conquered = None
+        self.human = False
+        self.turn_done = False
 
     def __str__(self):
         return self.name
-
 
 class Force:
     def __init__(self, owner, soldiers, target_nat):
         self.owner = owner
         self.soldiers = soldiers
         self.target_nat = target_nat
-
-
 
 def mutual_stance(n1_name, n2_name, stance):
     global stances
@@ -111,14 +107,22 @@ def nat_with_name_starting_with(prefix):
     else:
         return None
 
-def cmd_do_nothing(args):
+def all_turns_done():
+    for n in nats:
+        if not n.turn_done: return False
+    return True
+
+def cmd_do_nothing(pov_nat_id, args):
     resp = ''
-    resp = tick(resp)
+    nats[pov_nat_id].turn_done = True
+    if all_turns_done():
+        resp = tick(resp)
     resp += '-' * 40 + '\n'
     return resp
 cmd_n = cmd_do_nothing
 
-def cmd_raise_soldiers(args):
+def cmd_raise_soldiers(pov_nat_id, args):
+    you = pov_nat_id
     resp = ''
     new_soldiers = int(args[1])
     cost = new_soldiers * 100000
@@ -132,7 +136,8 @@ def cmd_raise_soldiers(args):
     return resp
 cmd_s = cmd_raise_soldiers
 
-def cmd_invade(args):
+def cmd_invade(pov_nat_id, args):
+    you = pov_nat_id
     resp = ''
     name = args[1]
     defender = nat_with_name_starting_with(name)
@@ -157,7 +162,8 @@ def cmd_invade(args):
     return resp
 cmd_inv = cmd_invade
 
-def cmd_withdraw(args):
+def cmd_withdraw(pov_nat_id, args):
+    you = pov_nat_id
     resp = ''
     name = args[1]
     target_nat = nat_with_name_starting_with(name)
@@ -200,11 +206,26 @@ def get_force_there_already(owner, where):
             return f
     return None
 
+def ai_orders():
+    resp = ''
+    for nat in nats:
+        if nat.human: continue
+        resp += '%s thinks...\n' % nat
+    return resp
+
 def tick(resp):
-    resp += 'Time advances...\n'
+    global tock
+
+    resp += ai_orders()
+
+    tock += 1
+    resp += 'Time advances to %i...\n' % tock
+
     resp = conflicts(resp)
     resp = looting(resp)
     resp = rebellion(resp)
+    reset_turn_dones()
+    save()
     return resp
 
 def conflicts(resp):
@@ -213,7 +234,9 @@ def conflicts(resp):
         print 'eval %s force in %s' % (f.owner.adj, f.target_nat)
         attacker = f.owner
         defender = f.target_nat
-        if defender.conquered and defender.soldiers == 0:
+        if defender.conquered:
+            continue
+        if not defender.conquered and f.soldiers == 0:
             continue
         atk_kills = calc_kills(f.soldiers, attacker.troop_skill)
         def_kills = calc_kills(defender.soldiers, defender.troop_skill)
@@ -264,13 +287,15 @@ def rebellion(resp):
 
 shortcuts = {'.' : 'again'}
 
-def cmd_ui(args):
-    return render_ui()
+def cmd_ui(pov_nat_id, args):
+    return render_ui(pov_nat_id)
 
-def render_ui():
+def render_ui(pov_nat_id):
+    you = pov_nat_id
     resp = ''
-    fmt = '%9s %6s %9s %7s %6s %6s %2s %6s'
-    resp += fmt % ('country','stance','owner','money','pop.','troops','ts','occreq') + '\n'
+    resp += 'Turn %i\n' % tock
+    fmt = '%9s %1s %6s %9s %7s %6s %6s %2s %6s'
+    resp += fmt % ('country','d','stance','owner','money','pop.','troops','ts','occreq') + '\n'
     for nat in nats:
         name = '%s' % nat.name
         if nat is nats[you]:
@@ -281,7 +306,8 @@ def render_ui():
         pop = abbrev_num(nat.pop)
         soldiers = abbrev_num(nat.soldiers)
         occ_req = abbrev_num(get_min_req_occupying_force_size(nat))
-        resp += fmt % (name, stance, owner, money, pop, soldiers, nat.troop_skill, occ_req)
+        done = nat.turn_done and 'd' or '-'
+        resp += fmt % (name, done, stance, owner, money, pop, soldiers, nat.troop_skill, occ_req)
         invaders = ''
         for f in forces:
             if f.target_nat == nat:
@@ -290,7 +316,7 @@ def render_ui():
     resp += '\n'
     return resp
 
-def handle_input(input):
+def handle_input(exe_nat_id, input):
     global last_input
     resp = ''
     #input = sys.stdin.readline().strip()
@@ -312,14 +338,17 @@ def handle_input(input):
     if cmd_fn_name in globals():
         fn = globals()[cmd_fn_name]
         print 'dispatching to: %s (%s)' % (fn, args)
-        resp += fn(args)
+        resp += fn(exe_nat_id,args)
     resp += '-' * 40 + '\n'
-    if cmd_fn_name != 'cmd_ui':
+    if cmd_fn_name not in ('cmd_ui','cmd_do_nothing','cmd_n'):
         save()
-        resp += render_ui()
+    if cmd_fn_name not in ('cmd_ui'):
+        resp += render_ui(exe_nat_id)
     return resp
 
 class Server(LineReceiver):
+    cl_nat_id = None
+
     def connectionMade(self):
         print 'server conn made'
 
@@ -331,16 +360,21 @@ class Server(LineReceiver):
 
     def lineReceived(self, line):
         print "server line recvd: '%s'" % line
-        resp = handle_input(line)
+        resp = ''
+        if line.startswith('login '):
+            self.cl_nat_id = int(line.split()[1])
+        else:
+            resp = handle_input(self.cl_nat_id,line)
         #print "server responding: '%s'" % resp
         self.sendLine(resp)
 
 def save():
     print 'saving'
     state = State()
+    state.tock = tock
     state.nats = nats
     state.nats_by_name = nats_by_name
-    state.you = you
+    #state.you = you
     state.last_input = last_input
     state.forces = forces
     state.stances = stances
@@ -354,15 +388,16 @@ def restore():
     global nats, nats_by_name, you, last_input, forces, stances
     with open(fpath,'r') as f:
         state = pickle.load(f)
+        tock = state.tock
         nats = state.nats
         nats_by_name = state.nats_by_name
-        you = state.you
+        #you = state.you
         last_input = state.last_input
         forces = state.forces
         stances = state.stances
 
 def init():
-    global nats, nats_by_name, you, stances
+    global nats, nats_by_name, stances
     # pop from Wikipedia, for 2009
     # soldiers from 'Total Troops' column of web page: http://en.wikipedia.org/wiki/List_of_countries_by_size_of_armed_forces
     # key: country     adj          money         pop          soldiers ts
@@ -382,7 +417,12 @@ def init():
     ]
     for nat in nats:
         nats_by_name[nat.name] = nat
-    you = 0
+
+    nats[0].human = True
+    nats[4].human = True
+
+    reset_turn_dones()
+
     stances = {}
     for n1 in nats:
         stances[n1] = {}
@@ -404,6 +444,10 @@ def init():
     mutual_stance('USA', 'Russia', STANCE_WARY)
     mutual_stance('USA', 'Iran', STANCE_UNFRIENDLY)
     mutual_stance('USA', 'N. Korea', STANCE_UNFRIENDLY)
+
+def reset_turn_dones():
+    for nat in nats:
+        nat.turn_done = not nat.human
 
 def main():
     print 'Warconomy server'

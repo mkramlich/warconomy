@@ -1,8 +1,10 @@
 TODO
 
+the 'resp' results of a tick() execute should be stored in a variable that ALL subsequent client calls and fetch and render themselves
+
 an NPC country with stance of 1 towards you WILL send forces to invade you, during the tick, IF an invading force is not currently present in his countr 
 
-change to client/server architecture using twisted; allow multiple players, each player connects with his own client, each player controlling one country; countries that don't have a human client/player are instead run by AI during the tick
+make AI nations do things (raise, invade, withdraw, change stance?)
 
 tanks
 
@@ -10,13 +12,9 @@ planes
 
 command to raise soldiers by specifying money to spend
 
-NPC countries should do things during tick (raise troops, attack...)
-
 some countries have siginificant oil, some do not
 
 each country has a set of resources it supplies and demands
-
-conquered country's owner can loot it, taking it's money and resources
 
 NPC countries can have a list of countries they don't like (may attack)
 

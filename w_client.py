@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.5
 
+import sys
 from twisted.internet import stdio, reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
@@ -28,9 +29,13 @@ class ConsoleClient(LineReceiver):
         #self.sendLine('client conn failed: %s' % reason.getErrorMessage())
         reactor.stop()
 
+player_id = 0
+
 class ServerClient(LineReceiver):
     def connectionMade(self):
         print 'sv client conn made'
+        print 'sv client logging in as player_id %i' % player_id
+        self.sendLine('login %i' % player_id)
         self.sendLine('ui')
 
     def connectionLost(self, reason):
@@ -64,7 +69,10 @@ class ServerClientFactory(ClientFactory):
         return server_client
 
 def main():
+    global player_id
     print 'Warconomy client'
+    if len(sys.argv) > 1:
+        player_id = int(sys.argv[1])
     stdio.StandardIO(ConsoleClient())
     reactor.connectTCP('localhost',8007,ServerClientFactory())
     reactor.run()
