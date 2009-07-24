@@ -14,6 +14,7 @@ last_input = None
 forces = []
 stances = {}
 tock = 0
+last_tick_results = ''
 
 STANCE_EXTERMINATE = 0
 STANCE_WAR = 1
@@ -107,19 +108,25 @@ def nat_with_name_starting_with(prefix):
     else:
         return None
 
-def all_turns_done():
+def all_human_turns_done():
     for n in nats:
-        if not n.turn_done: return False
+        if n.human and not n.turn_done: return False
     return True
 
 def cmd_do_nothing(pov_nat_id, args):
+    global last_tick_results
     resp = ''
     nats[pov_nat_id].turn_done = True
-    if all_turns_done():
+    if all_human_turns_done():
         resp = tick(resp)
+        last_tick_results = resp
     resp += '-' * 40 + '\n'
     return resp
 cmd_n = cmd_do_nothing
+
+def cmd_last_tick_results(pov_nat_id, args):
+    return last_tick_results
+cmd_l = cmd_last_tick_results
 
 def cmd_raise_soldiers(pov_nat_id, args):
     you = pov_nat_id
@@ -194,11 +201,13 @@ def cmd_withdraw(pov_nat_id, args):
 cmd_wd = cmd_withdraw
 
 def calc_kills(shooting_soldiers, skill):
-    kills = 0
+    kills = int( shooting_soldiers * (float(skill) / 10.0) * random.random() )
+    return kills
+    '''kills = 0
     for i in xrange(shooting_soldiers):
         if random.randrange(0,10) < skill:
             kills += 1
-    return kills
+    return kills'''
 
 def get_force_there_already(owner, where):
     for f in forces:
@@ -211,6 +220,7 @@ def ai_orders():
     for nat in nats:
         if nat.human: continue
         resp += '%s thinks...\n' % nat
+        nat.turn_done = True
     return resp
 
 def tick(resp):
@@ -294,26 +304,26 @@ def render_ui(pov_nat_id):
     you = pov_nat_id
     resp = ''
     resp += 'Turn %i\n' % tock
-    fmt = '%9s %1s %6s %9s %7s %6s %6s %2s %6s'
-    resp += fmt % ('country','d','stance','owner','money','pop.','troops','ts','occreq') + '\n'
+    fmt = '%9s %1s %1s %6s %9s %7s %6s %6s %2s %6s'
+    resp += fmt % ('country','p','d','stance','owner','money','pop.','troops','ts','occreq') + '\n'
     for nat in nats:
         name = '%s' % nat.name
         if nat is nats[you]:
             name = '*%s*' % name
+        ptype = nat.human and 'h' or 'c'
+        done = nat.turn_done and 'd' or '-'
         stance = '%s/%s' % (stances[nat][nats[you]], stances[nats[you]][nat])
         money = '$%s' % abbrev_num(nat.money)
         owner = nat.conquered and nat.conquered.name or ''
         pop = abbrev_num(nat.pop)
         soldiers = abbrev_num(nat.soldiers)
         occ_req = abbrev_num(get_min_req_occupying_force_size(nat))
-        done = nat.turn_done and 'd' or '-'
-        resp += fmt % (name, done, stance, owner, money, pop, soldiers, nat.troop_skill, occ_req)
+        resp += fmt % (name, ptype, done, stance, owner, money, pop, soldiers, nat.troop_skill, occ_req)
         invaders = ''
         for f in forces:
             if f.target_nat == nat:
-                invaders += ' (%s %s soldiers)' % (abbrev_num(f.soldiers), f.owner.adj)
+                invaders += ' (%s %s sol.)' % (abbrev_num(f.soldiers), f.owner.adj)
         resp += invaders + '\n'
-    resp += '\n'
     return resp
 
 def handle_input(exe_nat_id, input):
@@ -348,6 +358,7 @@ def handle_input(exe_nat_id, input):
 
 class Server(LineReceiver):
     cl_nat_id = None
+    auth = False
 
     def connectionMade(self):
         print 'server conn made'
@@ -361,8 +372,20 @@ class Server(LineReceiver):
     def lineReceived(self, line):
         print "server line recvd: '%s'" % line
         resp = ''
-        if line.startswith('login '):
-            self.cl_nat_id = int(line.split()[1])
+        if not self.auth:
+            if line.startswith('login '):
+                nat_id = int(line.split()[1])
+                if not nats[nat_id].human:
+                    print 'login attempt for a non-human nation %i so disconnecting him' % nat_id
+                    self.transport.loseConnection()
+                    return
+                auth_valid = True #TODO truly check given password/key
+                if not auth_valid:
+                    print 'login attempt gave invalid auth so disconnecting him'
+                    self.transport.loseConnection()
+                    return
+                self.cl_nat_id = nat_id
+                self.auth = True
         else:
             resp = handle_input(self.cl_nat_id,line)
         #print "server responding: '%s'" % resp
@@ -372,9 +395,9 @@ def save():
     print 'saving'
     state = State()
     state.tock = tock
+    state.last_tick_results = last_tick_results
     state.nats = nats
     state.nats_by_name = nats_by_name
-    #state.you = you
     state.last_input = last_input
     state.forces = forces
     state.stances = stances
@@ -389,37 +412,37 @@ def restore():
     with open(fpath,'r') as f:
         state = pickle.load(f)
         tock = state.tock
+        last_tick_results = state.last_tick_results
         nats = state.nats
         nats_by_name = state.nats_by_name
-        #you = state.you
         last_input = state.last_input
         forces = state.forces
         stances = state.stances
 
-def init():
+def init(hums):
     global nats, nats_by_name, stances
     # pop from Wikipedia, for 2009
     # soldiers from 'Total Troops' column of web page: http://en.wikipedia.org/wiki/List_of_countries_by_size_of_armed_forces
     # key: country     adj          money         pop          soldiers ts
     nats = [
     Nation('USA',             'US', 2000000000000,  306963000,   3385400, 5),
-    Nation('France',      'French',  100000000000,   65073482,    779450, 3),
-    Nation('Germany',     'German',  250000000000,   82060000,    606362, 4),
-    Nation('Mexico',     'Mexican',   10000000000,  111211789,    517770, 1),
-    Nation('China',      'Chinese', 1000000000000, 1338612968,   7024000, 3),
-    Nation('Russia',     'Russian',  100000000000,  142008838,   3796100, 4),
-    Nation('Iran',       'Iranian',   10000000000,   70495782,   1695000, 2),
-    Nation('Japan',     'Japanese',  300000000000,  127433494,    296550, 3),
-    Nation('India',       'Indian',  100000000000, 1100000000,   3773300, 3),
+    Nation('France',      'Fre',  100000000000,   65073482,    779450, 3),
+    Nation('Germany',     'Ger',  250000000000,   82060000,    606362, 4),
+    Nation('Mexico',     'Mexn',   10000000000,  111211789,    517770, 1),
+    Nation('China',      'Chin', 1000000000000, 1338612968,   7024000, 3),
+    Nation('Russia',     'Rus',  100000000000,  142008838,   3796100, 4),
+    Nation('Iran',       'Iran.',   10000000000,   70495782,   1695000, 2),
+    Nation('Japan',     'Jap',  300000000000,  127433494,    296550, 3),
+    Nation('India',       'Ind',  100000000000, 1100000000,   3773300, 3),
     Nation('Brazil',       'Braz.',   10000000000,  191241714,   1687600, 1),
     Nation('UK',              'UK',  200000000000,   61612300,    421830, 5),
-    Nation('N. Korea', 'N. Korean',    1000000000,   22666000,   5995000, 2),
+    Nation('N. Korea', 'NKor',    1000000000,   22666000,   5995000, 2),
     ]
     for nat in nats:
         nats_by_name[nat.name] = nat
 
-    nats[0].human = True
-    nats[4].human = True
+    for hum in hums:
+        nats[hum].human = True
 
     reset_turn_dones()
 
@@ -447,11 +470,19 @@ def init():
 
 def reset_turn_dones():
     for nat in nats:
-        nat.turn_done = not nat.human
+        nat.turn_done = False
 
 def main():
     print 'Warconomy server'
-    init()
+    hums = [0,] # by default one human, controlling nation 0
+    if len(sys.argv) > 1:
+        args = sys.argv[1:]
+        for arg in args:
+            if arg.startswith('hum='):
+                hums = arg.split('=')[1].split(',')
+                hums = map(int,hums)
+                print 'hums: %s' % hums
+    init(hums)
     restore()
     factory = Factory()
     factory.protocol = Server

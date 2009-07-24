@@ -44,7 +44,7 @@ class ServerClient(LineReceiver):
 
     def lineReceived(self, line):
         #print "sv client line recvd: '%s'" % line
-        print line
+        print line.strip()
 
     def send_to_server(self, msg):
         self.sendLine(msg)

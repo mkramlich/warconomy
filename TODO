@@ -1,6 +1,8 @@
 TODO
 
-the 'resp' results of a tick() execute should be stored in a variable that ALL subsequent client calls and fetch and render themselves
+login gives password/key, and server-side confirms if its correct
+
+server should reject login attempt for a nation that's already logged-in on another connection
 
 an NPC country with stance of 1 towards you WILL send forces to invade you, during the tick, IF an invading force is not currently present in his countr 
 
