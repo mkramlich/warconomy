@@ -203,11 +203,6 @@ cmd_wd = cmd_withdraw
 def calc_kills(shooting_soldiers, skill):
     kills = int( shooting_soldiers * (float(skill) / 10.0) * random.random() )
     return kills
-    '''kills = 0
-    for i in xrange(shooting_soldiers):
-        if random.randrange(0,10) < skill:
-            kills += 1
-    return kills'''
 
 def get_force_there_already(owner, where):
     for f in forces:

@@ -32,6 +32,8 @@ when any battles occur in a country, some civ pop may die
 
 cmd '?' or 'h' lists avail commands with argument syntax
 
+server argument to specify alternate savedgame fpath
+
 fighters created via rebellion should have a lower troop_skill than their nation's normal prof military soldier skill, since is ragtag militia with no formal training
 
 countries to add:
