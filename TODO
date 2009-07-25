@@ -1,5 +1,7 @@
 TODO
 
+should be something else (worthwhile) you can do with money other than raise soldiers so user has the desired tension & challenge of making the choice
+
 login gives password/key, and server-side confirms if its correct
 
 server should reject login attempt for a nation that's already logged-in on another connection
