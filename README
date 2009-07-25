@@ -1,0 +1,95 @@
+*************
+* WARCONOMY *
+*************
+
+by Mike Kramlich
+
+
+This is simple game of modern international warfare and geopolitics. Multiple players are allowed, composed of at least one human and any number of computer players. The app has a client/server architecture and uses TCP/IP networking to communicate between the client and server. The creation of the game was driven mostly as an excuse to use the Twisted framework. Twisted provides concise but flexible, high-level abstractions for common network programming needs and event-driven architectures. In Python. Two great tastes that taste great together.
+
+------------------
+
+To play, start a server like this:
+
+    warconomy_sv
+
+If a 'savedgame' file is found it will load it and allow continued play from that point. Otherwise, it will initialize a new game world. By default only the USA (player slot 0) will be human-controlled, the rest computer/AI. If you want to specify which slots are human, do it like this:
+
+    warconomy_sv hum=2,4,5
+
+In the above example, it would declare player slots 2, 4 and 5 as human. The rest would be computer/AI.
+
+The server binds to localhost port 9876 by default. To specify a different port, do like this:
+
+    warconomy_sv port=5454
+
+Next, start a client, one per human player, like this:
+
+    warconomy_cl
+
+It's recommended that you don't start the server in the same terminal session as the client, because the server does write some log messages to stdout, and a client will need his stdout uncluttered to play well. Alternately, you could detach the server and redirect it's stdout to a log file or /dev/null, as you wish.
+
+With the client, you'll see output from the game and in reaction to your commands. Type in a command and hit enter. The command will be sent to the server, processed, and a response, if any, written back. When the client connects, it first 'logs in' by authenticating and declaring which nation/player slot it wants to operate as. By default, a client will try to use slot 0. To specify a different slot, do like this:
+
+    warconomy_cl id=3
+
+In that example, it would use nation slot 3 (the 4th nation, since the 1st is slot 0).
+
+The client expects the server at localhost:9876 by default. To specify a different address, add an argument like this:
+
+    warconomy_cl host=127.54.43.87:5454
+
+When playing here are the commands available:
+
+To add troops, costing $100k each:
+
+    s <soldierqty>
+
+To invade a nation:
+
+    inv <nationname>
+
+You may use lowercase letters in the nation name, and only enough letters to uniquely identify it, starting with the first letters. So to identify France, which is the only nation that starts with an 'F', you may use 'f' or 'F'. The same rules apply in any command where you need to specify a nation.
+
+Each time to issue the invade command, it will send 1/2 of the forces that were in your home country. You may issue the command multiple times during a single turn, against the same country, or against different countries.
+
+During the tick() update, invading forces present in a victim nation will do battle with the local national forces, with deaths occuring general on both sides. If the invasion force destroys all defending soldiers, they conquer the nation, and it becomes owned/controlled by the invading nation, and the invasion force becomes an occupation force. During the tick(), all nations that are in a conquered state will be looted by your forces. Looting means that your forces will steal or otherwise acquire up to 1/4 of the nation's remaining wealth and send it to your home country. This will occur during the tick() only when it is in a conquered state. If a nation you have invaded still has loyal local forces fighting you, however small, they are considered to be in a state of resistance, if not outright independence, and thus are not conquered, and thus the benefits of looting will not occur.
+
+In the nation report 'ts' is 'troop skill', a number which represents the overall measurement of military effectiveness per soldier, due to skill, training, health, strength & fitness, morale, intelligence, bravery, technology, rest/strain, etc. The number used currently may have no correlation with the real world, but are rather rough guesses and game-friendly assumptions. The national 'pop'-ulation, and troop strength ARE taken from real world values, as reported by Wikipedia in July 2009. Again, with troop strength, take them with a grain of salt as there are some arbitrary judgement calls on what constitutes a soldier vs a reserver vs a militia vs a farmer-with-a-shotgun and for some nations Wikipedia is just not going to have reliable data. Starting wealth ('money') values were picked out of thin air by me and no effort was made to make them realistic. The actual amount of wealth available in the real world, in an equivalent sitation, is fuzzy and fungible. Add in the fuzziness on soldier cost (a modern US Marine may cost big bucks to train, equip, deploy and support in a foreign country, whereas a local farmer-with-rifle will be probably one or two orders of magnitude cheaper, but be relatively more effective, per dollar, then the US Marine. To give one example.)
+
+To withdraw your forces from a nation:
+
+    wd <nationname>
+
+If you have more forces there currently that are the minimum required to occupy it without risk of serious domestic resistance, then it will remove all but that minimum force size. If you have exactly that amount already, or less, then it will remove ALL remaining forces.
+
+To repeat your last command:
+
+    .
+
+To indicate your turn is done:
+
+    n
+
+Once all players have submitted the command to indicate their turn is done, then the turn is over for everyone, and the game advances the world time to the next 'tock'. Just before that occurs, all computer/AI players will execute their thought processes, make decisions and submit commands of their own, just like a human player can. Once all computer players are done doing that, the 'tick()' occurs. During the tick, battles occur, looting, rebellion/resistance checks, and other periodic game world activities and world events.
+
+To see the result of the last tick() update:
+
+    l
+
+That's a lowercase L as in Larry or Lemur or Lasagna or Turtle. (Note the second to last letter in turtle.) The player whose 'n' command caused the tick to occur will automatically get a response from the server describing the results of the tick. All other players will need to issue the 'l' command to see it, once the tick has finished and results ready.
+
+The game is intended for use, at best, by other programmers, as it lacks a lot of polish and 'consumer chrome' a commercial product would require. We may add that in the future.
+
+
+Strategy & Tactics
+
+Spend everything you can on raising soldiers. Identify nations that have the right combination of high lootable wealth, low defense (soldiers) and low resistance (min occupation force requirements). Those should be your favored targets. After those nations have been conquered and secured, use the looted wealth to raise more soldiers (at a minimum replacing your losses, then replacing the occupation force required, then ideally growing beyond even that) move on to tougher or poorer targets. Countries with very large armies but little wealth may never be worth it to attack. I'm looking at you, North Korea. France, on the other hand, now that place looks interesting. All that wine and cheese, the beautiful women, the Eiffel tower, the Louve, Euro-Disney, plus they have such a poor track record militarily, since Napoleon anyway.
+
+thanks,
+
+Mike
+ZodLogic Games (game biz)
+Bit Byte and Logic (contract dev & consulting)
+http://zodlogic.webfactional.com/mikekramlichsoft/
+

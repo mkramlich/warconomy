@@ -474,6 +474,7 @@ def reset_turn_dones():
 
 def main():
     print 'Warconomy server'
+    port = 9876
     hums = [0,] # by default one human, controlling nation 0
     if len(sys.argv) > 1:
         args = sys.argv[1:]
@@ -482,11 +483,14 @@ def main():
                 hums = arg.split('=')[1].split(',')
                 hums = map(int,hums)
                 print 'hums: %s' % hums
+            if arg.startswith('port='):
+                port = int(arg.split('=')[1])
     init(hums)
     restore()
     factory = Factory()
     factory.protocol = Server
-    reactor.listenTCP(8007, factory)
+    print 'listening on port %i' % port
+    reactor.listenTCP(port, factory)
     reactor.run()
 
 if __name__ == '__main__':

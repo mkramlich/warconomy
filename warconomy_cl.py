@@ -5,8 +5,6 @@ from twisted.internet import stdio, reactor
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
 
-#out_msg_queue = []
-
 class ConsoleClient(LineReceiver):
     delimiter = '\n'
 
@@ -18,7 +16,6 @@ class ConsoleClient(LineReceiver):
         #self.sendLine("co client line recvd: '%s'" % line)
         if line == 'q':
             reactor.stop()
-        #out_msg_queue.append(line)
         server_client.send_to_server(line)
 
     def connectionLost(self, reason):
@@ -71,10 +68,21 @@ class ServerClientFactory(ClientFactory):
 def main():
     global player_id
     print 'Warconomy client'
+    ip = 'localhost'
+    port = 9876
     if len(sys.argv) > 1:
-        player_id = int(sys.argv[1])
+        args = sys.argv[1:]
+        for arg in args:
+            if arg.startswith('host='):
+                addr = arg.split('=')[1]
+                addr_pcs = addr.split(':')
+                ip = addr_pcs[0]
+                port = int(addr_pcs[1])
+            if arg.startswith('id='):
+                player_id = int(arg.split('=')[1])
     stdio.StandardIO(ConsoleClient())
-    reactor.connectTCP('localhost',8007,ServerClientFactory())
+    print 'connecting to host server at %s:%i' % (ip,port)
+    reactor.connectTCP(ip,port,ServerClientFactory())
     reactor.run()
     print 'exiting main()'
 
