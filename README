@@ -9,6 +9,13 @@ This is simple game of modern international warfare and geopolitics. Multiple pl
 
 ------------------
 
+Requirements:
+
+    * Python 2.5 or compatible
+    * Twisted installed in the Python version you use
+
+If the Python instance you use is not reachable via '/usr/bin/env python2.5' then you'll either need to make it so, or, modify the she-bang line of the client and server, or just fully-specify the Python instance on the command-line.
+
 To play, start a server like this:
 
     warconomy_sv
