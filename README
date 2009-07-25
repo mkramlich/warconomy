@@ -69,7 +69,7 @@ To repeat your last command:
 
 To indicate your turn is done:
 
-    n
+    d
 
 Once all players have submitted the command to indicate their turn is done, then the turn is over for everyone, and the game advances the world time to the next 'tock'. Just before that occurs, all computer/AI players will execute their thought processes, make decisions and submit commands of their own, just like a human player can. Once all computer players are done doing that, the 'tick()' occurs. During the tick, battles occur, looting, rebellion/resistance checks, and other periodic game world activities and world events.
 
@@ -77,7 +77,7 @@ To see the result of the last tick() update:
 
     l
 
-That's a lowercase L as in Larry or Lemur or Lasagna or Turtle. (Note the second to last letter in turtle.) The player whose 'n' command caused the tick to occur will automatically get a response from the server describing the results of the tick. All other players will need to issue the 'l' command to see it, once the tick has finished and results ready.
+That's a lowercase L as in Larry or Lemur or Lasagna or Turtle. (Note the second to last letter in turtle.) The player whose 'd' command caused the tick to occur will automatically get a response from the server describing the results of the tick. All other players will need to issue the 'l' command to see it, once the tick has finished and results ready.
 
 The game is intended for use, at best, by other programmers, as it lacks a lot of polish and 'consumer chrome' a commercial product would require. We may add that in the future.
 

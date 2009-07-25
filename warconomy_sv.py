@@ -113,16 +113,19 @@ def all_human_turns_done():
         if n.human and not n.turn_done: return False
     return True
 
-def cmd_do_nothing(pov_nat_id, args):
+def cmd_done(pov_nat_id, args):
     global last_tick_results
     resp = ''
+    if nats[pov_nat_id].turn_done:
+        print 'player already was done so ignoring command'
+        return resp
     nats[pov_nat_id].turn_done = True
     if all_human_turns_done():
         resp = tick(resp)
         last_tick_results = resp
     resp += '-' * 40 + '\n'
     return resp
-cmd_n = cmd_do_nothing
+cmd_d = cmd_done
 
 def cmd_last_tick_results(pov_nat_id, args):
     return last_tick_results
@@ -345,7 +348,7 @@ def handle_input(exe_nat_id, input):
         print 'dispatching to: %s (%s)' % (fn, args)
         resp += fn(exe_nat_id,args)
     resp += '-' * 40 + '\n'
-    if cmd_fn_name not in ('cmd_ui','cmd_do_nothing','cmd_n'):
+    if cmd_fn_name not in ('cmd_ui','cmd_done','cmd_d'):
         save()
     if cmd_fn_name not in ('cmd_ui'):
         resp += render_ui(exe_nat_id)
